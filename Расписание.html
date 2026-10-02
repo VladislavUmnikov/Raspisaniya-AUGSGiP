@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Расписание</title>
+<style>
+:root{--bg:#080a12;--panel:#12151f;--card:#33353a;--line:#1f2a44;--tx:#f2f4f8;--mut:#9aa0ae;--red:#ff2a2a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#080a12}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--tx);font-family:"Segoe UI",Roboto,Arial,sans-serif;padding:0 10px 30px}
+.tabs,.nav,.pills{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:10px 0}
+button,select,input{font:inherit;color:var(--tx);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 16px}
+button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #5b8cff}
+.tabs button{font-size:18px;min-width:130px}.tabs button.on,.pills button.on{background:#1d2740;border-color:#4a69b8}
+.nav{align-items:center}.nav b{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 14px;font-size:14px}
+.nav button{min-width:70px;font-size:20px}
+.wk{text-align:center;margin-bottom:8px}.wk span{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 26px;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;max-width:1200px;margin:0 auto}
+.col{border-left:2px solid var(--line);border-right:2px solid var(--line);padding:0 3px}
+.col h3{text-align:center;margin:8px 0 12px;font-size:19px}
+.col h3 small{display:block;font-size:12px;color:var(--mut);font-weight:400}
+.col.today h3{color:#7fb0ff}
+.col.alarm h3{animation:blink .9s steps(2,jump-none) infinite;color:var(--red)}
+@keyframes blink{50%{color:#fff;text-shadow:0 0 14px var(--red)}}
+.cell{position:relative;height:118px;margin-bottom:10px}
+.card{position:relative;z-index:1;background:#16181d;border-radius:6px;border-top:3px solid var(--c);height:100%;padding:0 0 6px;display:flex;flex-direction:column;overflow:hidden}
+.in{background:var(--card);margin:3px 3px 0;border-radius:4px;padding:6px 8px;flex:1;display:flex;flex-direction:column;justify-content:space-between;min-height:0}
+.top{display:flex;justify-content:space-between;gap:6px;font-size:14px}
+.top span:last-child{white-space:nowrap;font-size:12px}
+.room{background:var(--c);color:#fff;border-radius:4px;padding:0 5px;font-size:12px}
+.tch{color:var(--mut);font-size:12px;line-height:1.3}
+.time{text-align:center;font-size:11px;padding-top:3px}
+.bar{position:absolute;left:0;right:0;bottom:0;height:6px}.bar i{display:block;height:100%;width:0;background:var(--c);border-radius:0 3px 3px 0;transition:width .6s}.bar.end i{width:100%;background:#7a7a7a;border-radius:0}
+.time.live{color:#ff6b6b;font-weight:700}.time.live::before{content:"● ";animation:pl 1.2s ease-in-out infinite}@keyframes pl{50%{opacity:.2}}
+.tag{position:absolute;right:6px;bottom:20px;font-size:10px;background:#ffb020;color:#111;border-radius:4px;padding:1px 6px;font-weight:700}
+.cell.cancel .in{opacity:.45}.cell.cancel .top span:first-child{text-decoration:line-through}
+.cell.cancel .tag{background:#ff4d4d;color:#fff}
+.cell.chem{margin-bottom:48px}
+.beacon{position:absolute;left:50%;top:100%;width:var(--bs,150px);height:var(--bs,150px);margin:calc(var(--bs,150px)/-2) 0 0 calc(var(--bs,150px)/-2);pointer-events:none;z-index:0;border-radius:50%;
+background:conic-gradient(var(--red) 0 60deg,transparent 60deg 180deg,var(--red) 180deg 240deg,transparent 240deg);
+filter:blur(9px);animation:spin 1.3s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pills{display:none}
+.hint{text-align:center;color:var(--mut);font-size:13px;max-width:1200px;margin:6px auto}
+form{max-width:480px;margin:10px auto;display:grid;gap:10px}
+label{display:grid;gap:4px;font-size:14px;color:var(--mut)}
+form input,form select{width:100%}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row button{flex:1}
+.ok{background:#1d3a2a;border-color:#2f7a4f}.bad{background:#3a1d1d;border-color:#8a3a3a}
+.chk{display:flex;gap:8px;align-items:center;color:var(--tx)}.chk input{width:auto}
+#msg{text-align:center;color:#6fd69a;min-height:20px}
+@media (max-width:760px){
+ .cell{--bs:min(340px,92vw)}
+ .grid{grid-template-columns:1fr}.col:not(.show){display:none}.pills{display:flex;gap:6px}.pills button{padding:8px 11px}
+ .pills button.alarm{color:var(--red);border-color:var(--red)}}
+@media (prefers-reduced-motion:reduce){.beacon,.col.alarm h3{animation:none}}
+</style></head><body>
+<div class="tabs"><button id="t1" class="on">Расписание</button><button id="t2">Редактирование</button></div>
+<div id="v1">
+ <div class="nav"><button id="prev" aria-label="Прошлая неделя">←</button><b id="range"></b><button id="next" aria-label="Следующая неделя">→</button></div>
+ <div class="wk"><span id="par"></span></div>
+ <div class="pills" id="pills"></div>
+ <div class="grid" id="grid"></div>
+ <p class="hint">Жёлтая метка — замена, красная — отмена пары.</p>
+</div>
+<div id="v2" hidden>
+ <form id="f">
+  <label>Дата<input type="date" id="d" required></label>
+  <label>Пара<select id="s"></select></label>
+  <label>Предмет<input id="n" placeholder="Например, Химия"></label>
+  <label>Преподаватель<input id="p"></label>
+  <label>Аудитория<input id="r"></label>
+  <label class="chk"><input type="checkbox" id="u">Экстренное (красная тревога у этой пары)</label>
+  <label class="chk"><input type="checkbox" id="base">Менять основное расписание (этот день недели, все недели)</label>
+  <div class="row"><button type="submit" class="ok">Сохранить</button><button type="button" id="cn" class="bad">Отменить пару</button><button type="button" id="rs">Сбросить изменение</button></div>
+  <div id="msg"></div>
+ </form>
+ <p class="hint">Сейчас данные хранятся только в этом браузере. Общая база и вход для старост — следующий шаг.</p>
+</div>
+<script>
+var T=["08:30-10:00","10:10-11:40","12:00-13:30","14:00-15:30","15:50-17:20"],D=["Понедельник","Вторник","Среда","Четверг","Пятница"],DS=["Пн","Вт","Ср","Чт","Пт"];
+var COL={"Физика":"#1e78d6","Информатика":"#8a5cf0","ОБЗР":"#f0c93a","Биология":"#3fae4a","Обществознание":"#2bb3a0","Иностранный язык":"#4aa3f0","Литература":"#f29a1f","Математика":"#1e78d6","История":"#8a6552","Физкультура":"#1e78d6","Русский язык":"#1e78d6","Химия":"#e11"};
+function L(n,r,p){return{n:n,r:r,p:p}}
+var BASE0=[[null,L("Физика 1 гр.","204","Владислав Владимирович Синцов"),L("ОБЗР","204","Владислав Владимирович Синцов"),L("Обществознание","204","Владислав Владимирович Синцов"),L("Физика 2 гр.","204","Владислав Владимирович Синцов")],
+[null,L("Информатика","309","Е.В. Смирнова"),L("Биология","620","Е.Л. Романовская"),L("Иностранный язык","227/225","Е.Н. Головакина, Е.Н. Трунилова"),L("Информатика","309","Е.В. Смирнова")],
+[L("Литература","227","А.К. Абдулаева"),L("Математика","619","К.Н. Виноградова"),L("Математика","619","К.Н. Виноградова"),L("История","223","Н.Н. Букина"),null],
+[L("Математика","605","К.Н. Виноградова"),L("Химия","804","Е.А. Вагина"),L("Физика","204","В.В. Синцов"),L("Физкультура","С/З","В.В. Синцов"),null],
+[L("Русский язык","227","А.К. Абдулаева"),L("Математика","605","К.Н. Виноградова"),L("История","223","Н.Н. Букина"),L("Литература","227","А.К. Абдулаева"),null]];
+var st={base:BASE0,ch:{}};
+try{var sv=localStorage.getItem("sched1");if(sv)st=JSON.parse(sv)}catch(e){}
+function save(){try{localStorage.setItem("sched1",JSON.stringify(st))}catch(e){}}
+var $=function(i){return document.getElementById(i)};
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function fmt(d){return String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0")+"."+d.getFullYear()}
+function monday(d){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
+var REF=new Date(2026,8,28),off=0,day=0,now=new Date();
+var wd=(now.getDay()+6)%7;day=wd>4?0:wd;
+function color(n){for(var k in COL)if(n.indexOf(k)==0)return COL[k];return"#6b7280"}
+function urg(l){return l.u===undefined?/^хим/i.test(l.n):!!l.u}
+function lesson(date,di,si){var c=st.ch[iso(date)+"|"+si];if(c)return{l:c.cancel?st.base[di][si]:c,cancel:!!c.cancel,ch:true};return{l:st.base[di][si],ch:false}}
+function render(){
+ var m=monday(now);m.setDate(m.getDate()+off*7);var e=new Date(m);e.setDate(e.getDate()+4);
+ $("range").textContent=fmt(m).slice(0,6)+m.getFullYear()+"-"+fmt(e);
+ var wk=Math.round((m-REF)/604800000);$("par").textContent=(((wk%2)+2)%2==0?"I":"II")+" неделя";
+ var g="",p="",today=iso(now);
+ for(var di=0;di<5;di++){var dt=new Date(m);dt.setDate(dt.getDate()+di);var h="",chem=false;
+  for(var si=0;si<5;si++){var r=lesson(dt,di,si),l=r.l;
+   if(!l){h+='<div class="cell"></div>';continue}
+   var c=color(l.n),isC=urg(l)&&!r.cancel;if(isC)chem=true;
+   h+='<div class="cell'+(r.cancel?" cancel":"")+(isC?" chem":"")+'" style="--c:'+c+'">'+(isC?'<div class="beacon"></div>':"")+
+   '<div class="card"><div class="in"><div class="top"><span>'+esc(l.n)+'</span><span class="room">АУД '+esc(l.r)+'</span></div><div class="tch">'+esc(l.p)+'</div></div><div class="time">'+T[si]+'</div>'+(r.cancel?"":'<div class="bar" data-d="'+iso(dt)+'" data-s="'+si+'"><i></i></div>')+(r.ch?'<span class="tag">'+(r.cancel?"Отмена":"Замена")+'</span>':"")+'</div></div>'}
+  g+='<div class="col'+(iso(dt)==today?" today":"")+(chem?" alarm":"")+(di==day?" show":"")+'"><h3>'+D[di]+'<small>'+fmt(dt).slice(0,5)+'</small></h3>'+h+'</div>';
+  p+='<button data-d="'+di+'" class="'+(di==day?"on ":"")+(chem?"alarm":"")+'">'+DS[di]+'</button>'}
+ $("grid").innerHTML=g;$("pills").innerHTML=p;bars()}
+function bars(){var n=new Date(),td=iso(n),m=n.getHours()*60+n.getMinutes();document.querySelectorAll(".bar").forEach(function(b){var q=T[+b.dataset.s].split("-").map(function(x){var a=x.split(":");return+a[0]*60+ +a[1]}),w=0,e=false;
+ if(b.dataset.d<td)e=true;else if(b.dataset.d==td){if(m>=q[1])e=true;else if(m>q[0])w=(m-q[0])/(q[1]-q[0])*100}
+ b.className="bar"+(e?" end":"");var tm=b.previousSibling,lv=!e&&w>0;tm.className="time"+(lv?" live":"");tm.textContent=lv?"Идёт · осталось "+(q[1]-m)+" мин":T[+b.dataset.s];b.firstChild.style.width=e?"":w+"%"})}
+setInterval(bars,10000);
+$("prev").onclick=function(){off--;render()};$("next").onclick=function(){off++;render()};
+$("pills").onclick=function(ev){var b=ev.target.closest("button");if(b){day=+b.dataset.d;render()}};
+function tab(n){$("v1").hidden=n!=1;$("v2").hidden=n!=2;$("t1").className=n==1?"on":"";$("t2").className=n==2?"on":"";if(n==2)fill()}
+$("t1").onclick=function(){tab(1);render()};$("t2").onclick=function(){tab(2)};
+$("s").innerHTML=T.map(function(t,i){return'<option value="'+i+'">'+(i+1)+" пара, "+t+"</option>"}).join("");
+$("d").value=iso(now);$("d").onchange=$("s").onchange=function(){fill()};
+function di(){var x=new Date($("d").value+"T00:00");return(x.getDay()+6)%7}
+function fill(){if(!$("d").value)return;var d=di();if(d>4){$("msg").textContent="Выходной — выберите будний день";return}$("msg").textContent="";
+ var r=lesson(new Date($("d").value+"T00:00"),d,+$("s").value),l=r.l||{n:"",p:"",r:""};$("n").value=l.n;$("p").value=l.p;$("r").value=l.r;$("u").checked=urg(l)}
+$("n").oninput=function(){if(/^хим/i.test(this.value))$("u").checked=true};
+function done(t){$("msg").textContent=t;setTimeout(function(){$("msg").textContent=""},2500)}
+$("f").onsubmit=function(ev){ev.preventDefault();var d=di();if(d>4){done("Выберите будний день");return}
+ var s=+$("s").value,v=$("n").value.trim()?{n:$("n").value.trim(),p:$("p").value.trim(),r:$("r").value.trim(),u:$("u").checked}:null;
+ if($("base").checked)st.base[d][s]=v;else if(v)st.ch[$("d").value+"|"+s]=v;else{done("Введите предмет");return}
+ save();done("Сохранено");render()};
+$("cn").onclick=function(){var d=di();if(d>4||!st.base[d][+$("s").value]){done("В этот день пары нет");return}st.ch[$("d").value+"|"+$("s").value]={cancel:true};save();done("Пара отменена");render()};
+$("rs").onclick=function(){delete st.ch[$("d").value+"|"+$("s").value];save();fill();done("Изменение сброшено");render()};
+render();
+</script></body></html>
