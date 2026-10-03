@@ -55,6 +55,20 @@ form input,form select{width:100%}
  .grid{grid-template-columns:1fr}.col:not(.show){display:none}.pills{display:flex;gap:6px}.pills button{padding:8px 11px}
  .pills button.alarm{color:var(--red);border-color:var(--red)}}
 @media (prefers-reduced-motion:reduce){.beacon,.col.alarm h3{animation:none}}
+
+.top .rm{white-space:nowrap;font-size:12px}
+.dots{background:#555;border:0;border-radius:10px;padding:0 7px;font-size:12px;line-height:18px;color:#fff;cursor:pointer;letter-spacing:1px}
+.cell>.dots{position:absolute;right:6px;top:6px;z-index:3}
+.cell.empty>.dots{font-size:16px;padding:0 10px;opacity:.7}
+.xcard{position:relative;z-index:1;height:100%;background:#c40000;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff}
+.xcard b{font-size:30px;font-weight:500}.xcard small{font-size:11px;opacity:.85;margin-top:4px;padding:0 8px;text-align:center}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}.ov[hidden]{display:none}
+.dlg{background:#0d1020;border:2px solid var(--line);border-radius:18px;padding:14px;width:min(360px,100%);max-height:90vh;overflow:auto;display:grid;gap:8px}
+.dlg h4{margin:0 0 4px;text-align:center;font-size:15px}
+.dlg button.m{background:#5a5a5a;border:0;font-size:20px;padding:8px}.dlg button.m.sm{font-size:14px}
+.dlg label{display:grid;gap:4px;font-size:13px;color:var(--mut)}.dlg select,.dlg input{width:100%}
+.dlg .chk{display:flex;gap:8px;align-items:center;color:var(--tx)}.dlg .chk input{width:auto}
+.dlg .row{display:flex;gap:8px}.dlg .row button{flex:1}
 </style></head><body>
 <div class="tabs"><button id="t1" class="on">Расписание</button><button id="t2">Редактирование</button></div>
 <div id="v1">
@@ -62,55 +76,60 @@ form input,form select{width:100%}
  <div class="wk"><span id="par"></span></div>
  <div class="pills" id="pills"></div>
  <div class="grid" id="grid"></div>
- <p class="hint">Жёлтая метка — замена, красная — отмена пары.</p>
+ <p class="hint" id="hint"></p>
 </div>
-<div id="v2" hidden>
- <form id="f">
-  <label>Дата<input type="date" id="d" required></label>
-  <label>Пара<select id="s"></select></label>
-  <label>Предмет<input id="n" placeholder="Например, Химия"></label>
-  <label>Преподаватель<input id="p"></label>
-  <label>Аудитория<input id="r"></label>
-  <label class="chk"><input type="checkbox" id="u">Экстренное (красная тревога у этой пары)</label>
-  <label class="chk"><input type="checkbox" id="base">Менять основное расписание (этот день недели, все недели)</label>
-  <div class="row"><button type="submit" class="ok">Сохранить</button><button type="button" id="cn" class="bad">Отменить пару</button><button type="button" id="rs">Сбросить изменение</button></div>
-  <div id="msg"></div>
- </form>
- <p class="hint">Сейчас данные хранятся только в этом браузере. Общая база и вход для старост — следующий шаг.</p>
-</div>
+<div class="ov" id="md" hidden><div class="dlg" id="dl"></div></div>
 <script>
 var T=["08:30-10:00","10:10-11:40","12:00-13:30","14:00-15:30","15:50-17:20"],D=["Понедельник","Вторник","Среда","Четверг","Пятница"],DS=["Пн","Вт","Ср","Чт","Пт"];
 var COL={"Физика":"#1e78d6","Информатика":"#8a5cf0","ОБЗР":"#f0c93a","Биология":"#3fae4a","Обществознание":"#2bb3a0","Иностранный язык":"#4aa3f0","Литература":"#f29a1f","Математика":"#1e78d6","История":"#8a6552","Физкультура":"#1e78d6","Русский язык":"#1e78d6","Химия":"#e11"};
+var CAT=[["Русский язык","227","А.К. Абдулаева"],["Литература","227","А.К. Абдулаева"],["Иностранный язык","227/225","Е.Н. Головакина, Е.Н. Трунилова"],["Иностранный язык","405/225","Е.Н. Головакина, Е.Н. Трунилова"],["Математика","605","К.Н. Виноградова"],["Математика","619","К.Н. Виноградова"],["Информатика","309","Е.В. Смирнова"],["Физика","204","В.В. Синцов"],["Биология","620","Е.Л. Романовская"],["Химия","804","Е.А. Вагина"],["История","223","Н.Н. Букина"],["Обществознание","223","Н.Н. Букина"],["Физкультура","Т/З","Ю.Н. Сивкова, А.И. Темеров"],["Физкультура","С/З","Ю.Н. Сивкова, А.И. Темеров"],["Математика","808","К.Н. Виноградова"],["ОБЗР","118","Н.В. Колигаев"]];
+function uniq(a){return a.filter(function(x,i){return x&&a.indexOf(x)==i})}
+function isR(r){return/^\d+\/\d+$/.test(r||"")}
+var SUBJ=uniq(CAT.map(function(c){return c[0]})),ROOMS=uniq([].concat.apply([],CAT.map(function(c){return isR(c[1])?c[1].split("/"):[c[1]]}))),TEACH=uniq([].concat.apply([],CAT.map(function(c){return c[2].split(", ")})));
+var TAG={zam:"Замена",aud:"Замена ауд",prep:"Замена преп",vpr:"ВПР"},TITLE={zam:"Замена",aud:"Замена АУД",prep:"Замена препод",vpr:"ВПР"};
 function L(n,r,p){return{n:n,r:r,p:p}}
-var BASE0=[[null,L("Физика 1 гр.","204","Владислав Владимирович Синцов"),L("ОБЗР","204","Владислав Владимирович Синцов"),L("Обществознание","204","Владислав Владимирович Синцов"),L("Физика 2 гр.","204","Владислав Владимирович Синцов")],
-[null,L("Информатика","309","Е.В. Смирнова"),L("Биология","620","Е.Л. Романовская"),L("Иностранный язык","227/225","Е.Н. Головакина, Е.Н. Трунилова"),L("Информатика","309","Е.В. Смирнова")],
-[L("Литература","227","А.К. Абдулаева"),L("Математика","619","К.Н. Виноградова"),L("Математика","619","К.Н. Виноградова"),L("История","223","Н.Н. Букина"),null],
-[L("Математика","605","К.Н. Виноградова"),L("Химия","804","Е.А. Вагина"),L("Физика","204","В.В. Синцов"),L("Физкультура","С/З","В.В. Синцов"),null],
-[L("Русский язык","227","А.К. Абдулаева"),L("Математика","605","К.Н. Виноградова"),L("История","223","Н.Н. Букина"),L("Литература","227","А.К. Абдулаева"),null]];
+var ab="А.К. Абдулаева",vi="К.Н. Виноградова",bu="Н.Н. Букина",sy="В.В. Синцов",sm="Е.В. Смирнова",ro="Е.Л. Романовская",ko="Н.В. Колигаев",va="Е.А. Вагина",fz="Ю.Н. Сивкова, А.И. Темеров",ie="Е.Н. Головакина, Е.Н. Трунилова";
+var BASE0=[[
+[null,L("Физика 1 гр.","204",sy),L("ОБЗР","118",ko),L("Обществознание","223",bu),L("Физика 2 гр.","204",sy)],
+[null,L("Информатика 1 гр.","309",sm),L("Биология","620",ro),L("Иностранный язык","227/225",ie),L("Информатика 2 гр.","309",sm)],
+[L("Литература","227",ab),L("Математика","619",vi),L("Математика","619",vi),L("История","223",bu),null],
+[L("Математика","605",vi),L("Химия","804",va),L("Физика","204",sy),L("Физкультура","С/З",fz),null],
+[L("Русский язык","227",ab),L("Математика","605",vi),L("История","223",bu),L("Литература","227",ab),null]],[
+[null,null,L("Физика","204",sy),L("История","223",bu),L("ОБЗР","118",ko)],
+[null,L("Информатика","309",sm),L("Биология","620",ro),L("Иностранный язык","405/225",ie),null],
+[L("Информатика 1 гр.","309",sm),L("ОБЗР","118",ko),L("Математика","808",vi),L("Физика","204",sy),L("Информатика 2 гр.","309",sm)],
+[L("Химия лаб.","804",va+", "+ro),L("Физкультура","С/З",fz),L("Русский язык","227",ab),L("Литература","227",ab),null],
+[L("Обществознание","223",bu),L("История","223",bu),L("Математика","605",vi),L("Математика","605",vi),null]]];
 var st={base:BASE0,ch:{}};
-try{var sv=localStorage.getItem("sched1");if(sv)st=JSON.parse(sv)}catch(e){}
-function save(){try{localStorage.setItem("sched1",JSON.stringify(st))}catch(e){}}
+try{var sv0=localStorage.getItem("sched2");if(sv0)st=JSON.parse(sv0)}catch(e){}
+function save(){try{localStorage.setItem("sched2",JSON.stringify(st))}catch(e){}}
 var $=function(i){return document.getElementById(i)};
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function fmt(d){return String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0")+"."+d.getFullYear()}
 function monday(d){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
-var REF=new Date(2026,8,28),off=0,day=0,now=new Date();
+var REF=new Date(2026,8,28),off=0,day=0,now=new Date(),edit=false,CK,CL,CA;
 var wd=(now.getDay()+6)%7;day=wd>4?0:wd;
 function color(n){for(var k in COL)if(n.indexOf(k)==0)return COL[k];return"#6b7280"}
 function urg(l){return l.u===undefined?/^хим/i.test(l.n):!!l.u}
-function lesson(date,di,si){var c=st.ch[iso(date)+"|"+si];if(c)return{l:c.cancel?st.base[di][si]:c,cancel:!!c.cancel,ch:true};return{l:st.base[di][si],ch:false}}
+function par(dt){var w=Math.round((monday(dt)-REF)/604800000);return((w%2)+2)%2}
+function lesson(dt,di,si){var k=iso(dt)+"|"+si,b=st.base[par(dt)][di][si];
+ if(b)for(var j=0;j<si;j++){var o=st.ch[iso(dt)+"|"+j];if(o&&o.t=="vpr")return{l:b,cancel:true,ch:true,k:k}}
+ var c=st.ch[k];if(!c)return{l:b,ch:false,k:k};
+ if(c.cancel)return{l:b,cancel:true,ch:true,k:k};
+ return{l:c,ch:true,k:k,t:c.t}}
 function render(){
  var m=monday(now);m.setDate(m.getDate()+off*7);var e=new Date(m);e.setDate(e.getDate()+4);
  $("range").textContent=fmt(m).slice(0,6)+m.getFullYear()+"-"+fmt(e);
  var wk=Math.round((m-REF)/604800000);$("par").textContent=(((wk%2)+2)%2==0?"I":"II")+" неделя";
  var g="",p="",today=iso(now);
  for(var di=0;di<5;di++){var dt=new Date(m);dt.setDate(dt.getDate()+di);var h="",chem=false;
-  for(var si=0;si<5;si++){var r=lesson(dt,di,si),l=r.l;
-   if(!l){h+='<div class="cell"></div>';continue}
-   var c=color(l.n),isC=urg(l)&&!r.cancel;if(isC)chem=true;
-   h+='<div class="cell'+(r.cancel?" cancel":"")+(isC?" chem":"")+'" style="--c:'+c+'">'+(isC?'<div class="beacon"></div>':"")+
-   '<div class="card"><div class="in"><div class="top"><span>'+esc(l.n)+'</span><span class="room">АУД '+esc(l.r)+'</span></div><div class="tch">'+esc(l.p)+'</div></div><div class="time">'+T[si]+'</div>'+(r.cancel?"":'<div class="bar" data-d="'+iso(dt)+'" data-s="'+si+'"><i></i></div>')+(r.ch?'<span class="tag">'+(r.cancel?"Отмена":"Замена")+'</span>':"")+'</div></div>'}
+  for(var si=0;si<5;si++){var r=lesson(dt,di,si),l=r.l,dots=edit?'<button class="dots" data-k="'+r.k+'" data-di="'+di+'" aria-label="Изменить пару">'+(l?"•••":"+")+'</button>':"";
+   if(!l){h+='<div class="cell empty">'+dots+'</div>';continue}
+   if(r.cancel){h+='<div class="cell"><div class="xcard"><b>ОТМЕНА</b><small>'+esc(l.n)+' · '+T[si]+'</small></div>'+dots+'</div>';continue}
+   var c=color(l.n),isC=urg(l);if(isC)chem=true;
+   h+='<div class="cell'+(isC?" chem":"")+'" style="--c:'+c+'">'+(isC?'<div class="beacon"></div>':"")+
+   '<div class="card"><div class="in"><div class="top"><span>'+esc(l.n)+'</span><span class="rm"><span class="room">АУД '+esc(l.r)+'</span> '+dots+'</span></div><div class="tch">'+esc(l.p)+'</div></div><div class="time">'+T[si]+'</div><div class="bar" data-d="'+iso(dt)+'" data-s="'+si+'"><i></i></div>'+(r.ch?'<span class="tag">'+(TAG[r.t]||"Замена")+'</span>':"")+'</div></div>'}
   g+='<div class="col'+(iso(dt)==today?" today":"")+(chem?" alarm":"")+(di==day?" show":"")+'"><h3>'+D[di]+'<small>'+fmt(dt).slice(0,5)+'</small></h3>'+h+'</div>';
   p+='<button data-d="'+di+'" class="'+(di==day?"on ":"")+(chem?"alarm":"")+'">'+DS[di]+'</button>'}
  $("grid").innerHTML=g;$("pills").innerHTML=p;bars()}
@@ -120,20 +139,40 @@ function bars(){var n=new Date(),td=iso(n),m=n.getHours()*60+n.getMinutes();docu
 setInterval(bars,10000);
 $("prev").onclick=function(){off--;render()};$("next").onclick=function(){off++;render()};
 $("pills").onclick=function(ev){var b=ev.target.closest("button");if(b){day=+b.dataset.d;render()}};
-function tab(n){$("v1").hidden=n!=1;$("v2").hidden=n!=2;$("t1").className=n==1?"on":"";$("t2").className=n==2?"on":"";if(n==2)fill()}
-$("t1").onclick=function(){tab(1);render()};$("t2").onclick=function(){tab(2)};
-$("s").innerHTML=T.map(function(t,i){return'<option value="'+i+'">'+(i+1)+" пара, "+t+"</option>"}).join("");
-$("d").value=iso(now);$("d").onchange=$("s").onchange=function(){fill()};
-function di(){var x=new Date($("d").value+"T00:00");return(x.getDay()+6)%7}
-function fill(){if(!$("d").value)return;var d=di();if(d>4){$("msg").textContent="Выходной — выберите будний день";return}$("msg").textContent="";
- var r=lesson(new Date($("d").value+"T00:00"),d,+$("s").value),l=r.l||{n:"",p:"",r:""};$("n").value=l.n;$("p").value=l.p;$("r").value=l.r;$("u").checked=urg(l)}
-$("n").oninput=function(){if(/^хим/i.test(this.value))$("u").checked=true};
-function done(t){$("msg").textContent=t;setTimeout(function(){$("msg").textContent=""},2500)}
-$("f").onsubmit=function(ev){ev.preventDefault();var d=di();if(d>4){done("Выберите будний день");return}
- var s=+$("s").value,v=$("n").value.trim()?{n:$("n").value.trim(),p:$("p").value.trim(),r:$("r").value.trim(),u:$("u").checked}:null;
- if($("base").checked)st.base[d][s]=v;else if(v)st.ch[$("d").value+"|"+s]=v;else{done("Введите предмет");return}
- save();done("Сохранено");render()};
-$("cn").onclick=function(){var d=di();if(d>4||!st.base[d][+$("s").value]){done("В этот день пары нет");return}st.ch[$("d").value+"|"+$("s").value]={cancel:true};save();done("Пара отменена");render()};
-$("rs").onclick=function(){delete st.ch[$("d").value+"|"+$("s").value];save();fill();done("Изменение сброшено");render()};
-render();
+function tab(x){edit=x;$("t1").className=x?"":"on";$("t2").className=x?"on":"";$("hint").textContent=x?"Нажмите ••• на паре, чтобы изменить её. Пока изменения хранятся только в этом браузере.":"Жёлтая метка — замена, красная карточка — отмена пары.";render()}
+$("t1").onclick=function(){tab(false)};$("t2").onclick=function(){tab(true)};
+$("grid").onclick=function(ev){var b=ev.target.closest(".dots");if(b)openMenu(b.dataset.k,+b.dataset.di)};
+function show(h){$("dl").innerHTML=h;$("md").hidden=false}
+function close(){$("md").hidden=true}
+$("md").onclick=function(ev){if(ev.target==$("md"))close()};
+function btn(a,t,c){return'<button class="m'+(c||"")+'" data-a="'+a+'">'+t+'</button>'}
+function openMenu(k,di){CK=k;var si=+k.split("|")[1];CL=lesson(new Date(k.split("|")[0]+"T00:00"),di,si).l;
+ show('<h4>'+D[di]+', '+T[si]+(CL?' · '+esc(CL.n):'')+'</h4>'+btn("zam","Замена")+(CL?btn("aud","Замена АУД")+btn("prep","Замена Препод"):"")+btn("vpr","ВПР")+(CL?btn("cancel","Отмена"):"")+(st.ch[k]?btn("undo","Вернуть, если было изменение"," sm"):""))}
+function pk(id,lab,list,val,opt){var cu=val&&list.indexOf(val)<0;
+ return'<label>'+lab+'<select id="'+id+'">'+(opt?'<option value="">— нет —</option>':"")+list.map(function(x){return'<option'+(x==val?" selected":"")+'>'+esc(x)+'</option>'}).join("")+'<option value="__"'+(cu?" selected":"")+'>Другое…</option></select><input id="'+id+'_t" placeholder="Впишите вручную" value="'+(cu?esc(val):"")+'"'+(cu?"":" hidden")+'></label>'}
+function gv(id){var s=$(id);if(!s)return"";return s.value=="__"?$(id+"_t").value.trim():s.value}
+function sv(id,v){var s=$(id);if(!s)return;var ok=[].some.call(s.options,function(o){return o.value==v||o.text==v});if(ok){s.value=v;var t=$(id+"_t");if(t)t.hidden=true}}
+function fillSubj(){var n=gv("fs"),c=CAT.filter(function(x){return x[0]==n})[0];if(!c)return;var rs=isR(c[1])?c[1].split("/"):[c[1]],t=c[2].split(", ");sv("fr1",rs[0]);sv("fr2",rs[1]||"");sv("ft1",t[0]);sv("ft2",t[1]||"");var u=$("fu");if(u)u.checked=/^хим/i.test(n)}
+function form(a){CA=a;var l=CL||{},rr=isR(l.r)?l.r.split("/"):[l.r||""],tt=(l.p||"").split(", "),h="<h4>"+TITLE[a]+"</h4>";
+ if(a=="zam"||a=="vpr")h+=pk("fs","Предмет",SUBJ,l.n||SUBJ[0]);
+ if(a!="prep")h+=pk("fr1","Аудитория",ROOMS,rr[0])+(a=="vpr"?"":pk("fr2","Вторая аудитория (если есть)",ROOMS,rr[1]||"",1));
+ if(a=="zam"||a=="prep")h+=pk("ft1","Преподаватель",TEACH,tt[0])+pk("ft2","Второй преподаватель (если есть)",TEACH,tt[1]||"",1);
+ if(a=="zam")h+='<label class="chk"><input type="checkbox" id="fu"'+(urg(l)?" checked":"")+'>Экстренное (красная тревога)</label>';
+ if(a=="vpr")h+='<p class="hint">Все пары после ВПР в этот день отменятся автоматически. Преподаватель не указывается.</p>';
+ show(h+'<div class="row"><button class="ok" data-a="save">Сохранить</button><button data-a="x">Закрыть</button></div>');
+ if(!CL&&(a=="zam"||a=="vpr"))fillSubj()}
+function j(a,b,s){return[a,b].filter(Boolean).join(s)}
+function saveF(){var l=CL||{},o;
+ if(CA=="zam"){var n=gv("fs");if(!n)return;o={t:"zam",n:n,r:j(gv("fr1"),gv("fr2"),"/"),p:j(gv("ft1"),gv("ft2"),", "),u:$("fu").checked}}
+ else if(CA=="aud"){if(!gv("fr1"))return;o=Object.assign({},l,{t:"aud",r:j(gv("fr1"),gv("fr2"),"/")})}
+ else if(CA=="prep"){if(!gv("ft1"))return;o=Object.assign({},l,{t:"prep",p:j(gv("ft1"),gv("ft2"),", ")})}
+ else{if(!gv("fs"))return;o={t:"vpr",n:gv("fs"),r:gv("fr1"),p:"",u:false}}
+ st.ch[CK]=o;done()}
+function done(){save();close();render()}
+$("dl").onclick=function(ev){var b=ev.target.closest("[data-a]");if(!b)return;var a=b.dataset.a;
+ if(a=="x")close();else if(a=="save")saveF();
+ else if(a=="cancel"){st.ch[CK]={cancel:true};done()}
+ else if(a=="undo"){delete st.ch[CK];done()}else form(a)};
+$("dl").onchange=function(ev){var s=ev.target,t=$(s.id+"_t");if(t)t.hidden=s.value!="__";if(s.id=="fs")fillSubj()};
+tab(false);
 </script></body></html>
