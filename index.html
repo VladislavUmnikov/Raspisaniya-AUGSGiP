@@ -105,17 +105,19 @@ try{var sv0=localStorage.getItem("sched2");if(sv0){var p0=JSON.parse(sv0);if(p0&
 function save(){try{localStorage.setItem("sched2",JSON.stringify({ch:st.ch}))}catch(e){}}
 var $=function(i){return document.getElementById(i)};
 
-/* ===== Общая база Firebase ===== */
-var DB="https://analitics-39932-default-rtdb.europe-west1.firebasedatabase.app/ch",pend=0;
+/* ===== Общая база Supabase ===== */
+var SB_URL="https://cxannjqzrtnevoturjql.supabase.co",SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN4YW5uanF6cnRuZXZvdHVyanFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwMjk2MjUsImV4cCI6MjEwNzYwNTYyNX0.cZEh8O7uSI3KI3zPHKuqMrtaL4RjXqDmFHr0Hqbe1QE",pend=0;
+var SH={apikey:SB_KEY,"Content-Type":"application/json"};
 function push(k,v){pend++;
- fetch(DB+"/"+encodeURIComponent(k)+".json",{method:v?"PUT":"DELETE",body:v?JSON.stringify(v):undefined})
- .catch(function(){}).then(function(){pend--})}
+ var q=v?fetch(SB_URL+"/rest/v1/changes",{method:"POST",headers:Object.assign({Prefer:"resolution=merge-duplicates"},SH),body:JSON.stringify({k:k,v:v})})
+        :fetch(SB_URL+"/rest/v1/changes?k=eq."+encodeURIComponent(k),{method:"DELETE",headers:SH});
+ q.catch(function(){}).then(function(){pend--})}
 function pull(){if(pend||!$("md").hidden)return;
  var s=new Date();s.setDate(s.getDate()-30);var f=iso(s);
- fetch(DB+".json?orderBy="+encodeURIComponent('"$key"')+"&startAt="+encodeURIComponent('"'+f+'"'))
+ fetch(SB_URL+"/rest/v1/changes?select=k,v&k=gte."+encodeURIComponent(f),{headers:SH})
  .then(function(r){return r.json()})
- .then(function(d){if(!d||d.error)d=d&&d.error?null:{};if(d===null)return;
-  var n={},k;for(k in st.ch)if(k.slice(0,10)<f)n[k]=st.ch[k];for(k in d)n[k]=d[k];
+ .then(function(a){if(!Array.isArray(a))return;
+  var n={},k,i;for(k in st.ch)if(k.slice(0,10)<f)n[k]=st.ch[k];for(i=0;i<a.length;i++)n[a[i].k]=a[i].v;
   if(JSON.stringify(n)!==JSON.stringify(st.ch)){st.ch=n;save();render()}})
  .catch(function(){})}
 /* ================================= */
