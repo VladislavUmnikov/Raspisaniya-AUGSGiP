@@ -106,7 +106,7 @@ function save(){try{localStorage.setItem("sched2",JSON.stringify({ch:st.ch}))}ca
 var $=function(i){return document.getElementById(i)};
 
 /* ===== Общая база Firebase ===== */
-var DB="https://analitics-39932-default-rtdb.firebaseio.com/ch",pend=0;
+var DB="https://analitics-39932-default-rtdb.europe-west1.firebasedatabase.app/ch",pend=0;
 function push(k,v){pend++;
  fetch(DB+"/"+encodeURIComponent(k)+".json",{method:v?"PUT":"DELETE",body:v?JSON.stringify(v):undefined})
  .catch(function(){}).then(function(){pend--})}
