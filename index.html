@@ -101,9 +101,25 @@ var BASE0=[[
 [L("Химия лаб.","804",va+", "+ro),L("Физкультура","С/З",fz),L("Русский язык","227",ab),L("Литература","227",ab),null],
 [L("Обществознание","223",bu),L("История","223",bu),L("Математика","605",vi),L("Математика","605",vi),null]]];
 var st={base:BASE0,ch:{}};
-try{var sv0=localStorage.getItem("sched2");if(sv0)st=JSON.parse(sv0)}catch(e){}
-function save(){try{localStorage.setItem("sched2",JSON.stringify(st))}catch(e){}}
+try{var sv0=localStorage.getItem("sched2");if(sv0){var p0=JSON.parse(sv0);if(p0&&p0.ch)st.ch=p0.ch}}catch(e){}
+function save(){try{localStorage.setItem("sched2",JSON.stringify({ch:st.ch}))}catch(e){}}
 var $=function(i){return document.getElementById(i)};
+
+/* ===== Общая база Firebase ===== */
+var DB="https://analitics-39932-default-rtdb.firebaseio.com/ch",pend=0;
+function push(k,v){pend++;
+ fetch(DB+"/"+encodeURIComponent(k)+".json",{method:v?"PUT":"DELETE",body:v?JSON.stringify(v):undefined})
+ .catch(function(){}).then(function(){pend--})}
+function pull(){if(pend||!$("md").hidden)return;
+ var s=new Date();s.setDate(s.getDate()-30);var f=iso(s);
+ fetch(DB+".json?orderBy="+encodeURIComponent('"$key"')+"&startAt="+encodeURIComponent('"'+f+'"'))
+ .then(function(r){return r.json()})
+ .then(function(d){if(!d||d.error)d=d&&d.error?null:{};if(d===null)return;
+  var n={},k;for(k in st.ch)if(k.slice(0,10)<f)n[k]=st.ch[k];for(k in d)n[k]=d[k];
+  if(JSON.stringify(n)!==JSON.stringify(st.ch)){st.ch=n;save();render()}})
+ .catch(function(){})}
+/* ================================= */
+
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function fmt(d){return String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0")+"."+d.getFullYear()}
@@ -139,7 +155,7 @@ function bars(){var n=new Date(),td=iso(n),m=n.getHours()*60+n.getMinutes();docu
 setInterval(bars,10000);
 $("prev").onclick=function(){off--;render()};$("next").onclick=function(){off++;render()};
 $("pills").onclick=function(ev){var b=ev.target.closest("button");if(b){day=+b.dataset.d;render()}};
-function tab(x){edit=x;$("t1").className=x?"":"on";$("t2").className=x?"on":"";$("hint").textContent=x?"Нажмите ••• на паре, чтобы изменить её. Пока изменения хранятся только в этом браузере.":"Жёлтая метка — замена, красная карточка — отмена пары.";render()}
+function tab(x){edit=x;$("t1").className=x?"":"on";$("t2").className=x?"on":"";$("hint").textContent=x?"Нажмите ••• на паре, чтобы изменить её. Изменения видны всем посетителям.":"Жёлтая метка — замена, красная карточка — отмена пары.";render()}
 $("t1").onclick=function(){tab(false)};$("t2").onclick=function(){tab(true)};
 $("grid").onclick=function(ev){var b=ev.target.closest(".dots");if(b)openMenu(b.dataset.k,+b.dataset.di)};
 function show(h){$("dl").innerHTML=h;$("md").hidden=false}
@@ -167,12 +183,13 @@ function saveF(){var l=CL||{},o;
  else if(CA=="aud"){if(!gv("fr1"))return;o=Object.assign({},l,{t:"aud",r:j(gv("fr1"),gv("fr2"),"/")})}
  else if(CA=="prep"){if(!gv("ft1"))return;o=Object.assign({},l,{t:"prep",p:j(gv("ft1"),gv("ft2"),", ")})}
  else{if(!gv("fs"))return;o={t:"vpr",n:gv("fs"),r:gv("fr1"),p:"",u:false}}
- st.ch[CK]=o;done()}
+ st.ch[CK]=o;push(CK,o);done()}
 function done(){save();close();render()}
 $("dl").onclick=function(ev){var b=ev.target.closest("[data-a]");if(!b)return;var a=b.dataset.a;
  if(a=="x")close();else if(a=="save")saveF();
- else if(a=="cancel"){st.ch[CK]={cancel:true};done()}
- else if(a=="undo"){delete st.ch[CK];done()}else form(a)};
+ else if(a=="cancel"){st.ch[CK]={cancel:true};push(CK,st.ch[CK]);done()}
+ else if(a=="undo"){delete st.ch[CK];push(CK,null);done()}else form(a)};
 $("dl").onchange=function(ev){var s=ev.target,t=$(s.id+"_t");if(t)t.hidden=s.value!="__";if(s.id=="fs")fillSubj()};
 tab(false);
+pull();setInterval(pull,15000);
 </script></body></html>
