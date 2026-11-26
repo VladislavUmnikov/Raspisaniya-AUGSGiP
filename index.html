@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#06070d">
-<meta name="description" content="Актуальное расписание занятий АУГСГиП: замены, отмены и изменения пар в реальном времени.">
+<meta name="description" content="Актуальное расписание занятий АУГСГиП: замены, отмены, переносы и изменения пар в реальном времени.">
 <title>Расписание · АУГСГиП</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236366f1'/%3E%3Cstop offset='1' stop-color='%2322d3ee'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='32' y='45' font-family='Arial' font-size='36' font-weight='700' fill='white' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
 <script>
@@ -140,7 +140,7 @@ input:focus,select:focus{border-color:var(--accent)}
 .pills{display:none}
 .hint{max-width:1320px;margin:12px auto 0;padding:0 24px;text-align:center;color:var(--mut);font-size:12.5px;line-height:1.55}
 .lg{display:inline-block;width:8px;height:8px;border-radius:2px;margin:0 5px 0 12px;vertical-align:middle;background:currentColor}
-.lg.y{color:var(--amber)}.lg.r{color:var(--red)}.lg.e{color:#ff6b81}
+.lg.y{color:var(--amber)}.lg.r{color:var(--red)}.lg.e{color:#ff6b81}.lg.m{color:#a78bfa}
 .grid{
   display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;
   max-width:1320px;margin:16px auto 0;padding:0 clamp(14px,2.4vw,22px);align-items:start;
@@ -244,6 +244,14 @@ body.edit .cell.empty:hover .ghost{border-color:color-mix(in srgb,var(--accent) 
 }
 .xcard b{position:relative;font-size:14px;font-weight:800;letter-spacing:.18em}
 .xcard small{position:relative;font-size:11px;opacity:.92;max-width:100%;padding:0 4px}
+.cell.moveout .xcard{
+  background:linear-gradient(135deg,rgba(99,102,241,.96),rgba(139,92,246,.94));
+  border-color:rgba(180,180,255,.45);
+  box-shadow:0 18px 44px -24px rgba(124,108,255,.9);
+}
+.cell.moveout .xcard::before{background:repeating-linear-gradient(45deg,rgba(255,255,255,.08) 0 12px,transparent 12px 24px)}
+.tag.move{background:linear-gradient(135deg,#8ea2ff,#a78bfa);color:#12102e;box-shadow:0 6px 16px -8px rgba(124,108,255,.95)}
+.movedfrom{margin-top:5px;font-size:10.5px;line-height:1.25;color:var(--mut)}
 .cell.chem{margin-bottom:34px}
 .beacon{
   position:absolute;left:50%;top:50%;width:var(--bs,150px);height:var(--bs,150px);
@@ -421,8 +429,8 @@ var CAT=[["Русский язык","227","А.К. Абдулаева"],["Лит�
 function uniq(a){return a.filter(function(x,i){return x&&a.indexOf(x)==i})}
 function isR(r){return/^\d+\/\d+$/.test(r||"")}
 var SUBJ=uniq(CAT.map(function(c){return c[0]})),ROOMS=uniq([].concat.apply([],CAT.map(function(c){return isR(c[1])?c[1].split("/"):[c[1]]}))),TEACH=uniq([].concat.apply([],CAT.map(function(c){return c[2].split(", ")})));
-var TAG={zam:"Замена",aud:"Замена ауд",prep:"Замена преп",vpr:"ВПР"},TITLE={zam:"Замена пары",aud:"Замена аудитории",prep:"Замена преподавателя",vpr:"ВПР"};
-var MSG={zam:"Замена сохранена",aud:"Аудитория изменена",prep:"Преподаватель изменён",vpr:"ВПР отмечена"};
+var TAG={zam:"Замена",aud:"Замена ауд",prep:"Замена преп",vpr:"ВПР",move:"Перенос"},TITLE={zam:"Замена пары",aud:"Замена аудитории",prep:"Замена преподавателя",vpr:"ВПР",move:"Перенос пары"};
+var MSG={zam:"Замена сохранена",aud:"Аудитория изменена",prep:"Преподаватель изменён",vpr:"ВПР отмечена",move:"Пара перенесена"};
 function L(n,r,p){return{n:n,r:r,p:p}}
 var ab="А.К. Абдулаева",vi="К.Н. Виноградова",bu="Н.Н. Букина",sy="В.В. Синцов",sm="Е.В. Смирнова",ro="Е.Л. Романовская",ko="Н.В. Колигаев",va="Е.А. Вагина",fz="Ю.Н. Сивкова, А.И. Темеров",ie="Е.Н. Головакина, Е.Н. Трунилова";
 var BASE0=[[
@@ -472,6 +480,7 @@ function pull(){if(pend||!$("md").hidden)return;
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function fmt(d){return String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0")+"."+d.getFullYear()}
+function slotLabel(k){var p=String(k||"").split("|"),d=new Date(p[0]+"T00:00"),si=+p[1];return isNaN(d.getTime())||!T[si]?String(k||""):DS[(d.getDay()+6)%7]+", "+fmt(d).slice(0,5)+" · "+T[si]}
 function monday(d){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
 function rangeText(a,b){
   if(a.getMonth()===b.getMonth())return a.getDate()+" — "+b.getDate()+" "+MONTHS[a.getMonth()]+" "+a.getFullYear();
@@ -486,16 +495,22 @@ function par(dt){var w=Math.round((monday(dt)-REF)/604800000);return((w%2)+2)%2}
 function lesson(dt,di,si){var k=iso(dt)+"|"+si,b=st.base[par(dt)][di][si];
   if(b)for(var j=0;j<si;j++){var o=st.ch[iso(dt)+"|"+j];if(o&&o.t=="vpr")return{l:b,b:b,cancel:true,ch:true,k:k}}
   var c=st.ch[k];if(!c)return{l:b,b:b,ch:false,k:k};
-  if(c.cancel)return{l:b,b:b,cancel:true,ch:true,k:k};
-  return{l:c,b:b,ch:true,k:k,t:c.t}}
+  if(c.cancel){var cl=b||(c.n?{n:c.n,r:c.r,p:c.p,u:c.u}:null);return{l:cl,b:b,cancel:true,ch:true,k:k,t:c.t,to:c.to,from:c.from}}
+  return{l:c,b:b,ch:true,k:k,t:c.t,to:c.to,from:c.from}}
 function clone(o){return o==null?null:JSON.parse(JSON.stringify(o))}
 function hasOwn(o,k){return Object.prototype.hasOwnProperty.call(o,k)}
-function remember(k){undoStack.push({k:k,had:hasOwn(st.ch,k),val:hasOwn(st.ch,k)?clone(st.ch[k]):null});if(undoStack.length>40)undoStack.shift()}
+function snapshot(k){return{k:k,had:hasOwn(st.ch,k),val:hasOwn(st.ch,k)?clone(st.ch[k]):null}}
+function remember(k){rememberKeys([k])}
+function rememberKeys(keys){undoStack.push({items:keys.map(snapshot)});if(undoStack.length>40)undoStack.shift()}
 function undoLast(){
   var x=undoStack.pop();
   if(!x){toast("Нечего отменять");return}
-  if(x.had)st.ch[x.k]=x.val;else delete st.ch[x.k];
-  push(x.k,x.had?x.val:null);save();render();updateEditInfo();
+  var items=x.items||[x];
+  items.forEach(function(i){
+    if(i.had)st.ch[i.k]=i.val;else delete st.ch[i.k];
+    push(i.k,i.had?i.val:null);
+  });
+  save();render();updateEditInfo();
   toast("Изменение отменено");
 }
 function weekKeys(){
@@ -545,16 +560,19 @@ function render(dir){
       var r=lesson(dt,di,si),l=r.l,idx=di*5+si;
       var dots=ed?'<button class="dots" data-k="'+r.k+'" data-di="'+di+'" aria-label="Изменить пару">'+(l?"•••":"+")+'</button>':"";
       if(!l){h+='<div class="cell empty" style="--i:'+idx+'" data-k="'+r.k+'" data-di="'+di+'"><div class="ghost"><span>Свободно</span></div>'+dots+'</div>';continue}
-      if(r.cancel){h+='<div class="cell" style="--i:'+idx+'" data-k="'+r.k+'" data-di="'+di+'"><div class="xcard"><b>ОТМЕНА</b><small>'+esc(l.n)+' · '+T[si]+'</small></div>'+dots+'</div>';continue}
+      if(r.cancel){
+        var mv=r.t=="move"&&r.to,mvName=mv&&st.ch[r.k]&&st.ch[r.k].n?st.ch[r.k].n:l.n;
+        h+='<div class="cell'+(mv?" moveout":"")+'" style="--i:'+idx+'" data-k="'+r.k+'" data-di="'+di+'"><div class="xcard"><b>'+(mv?"ПЕРЕНОС →":"ОТМЕНА")+'</b><small>'+esc(mvName)+' · '+T[si]+'</small>'+(mv?'<small>→ '+esc(slotLabel(r.to))+'</small>':"")+'</div>'+dots+'</div>';continue
+      }
       var c=color(l.n),isC=urg(l);if(isC)chem=true;
       h+='<div class="cell'+(isC?" chem":"")+(r.ch?" changed":"")+'" style="--i:'+idx+';--c:'+c+'" data-k="'+r.k+'" data-di="'+di+'">'+
          (isC?'<div class="beacon" aria-hidden="true"></div>':"")+
          '<div class="card">'+
            '<div class="card-main">'+
              '<div class="top"><span class="subj">'+esc(l.n)+'</span><span class="room" title="Аудитория '+esc(l.r)+'">'+esc(l.r)+'</span></div>'+
-             '<div class="tch">'+esc(l.p)+'</div>'+
+             '<div class="tch">'+esc(l.p)+'</div>'+(r.from?'<div class="movedfrom">из '+esc(slotLabel(r.from))+'</div>':"")+
            '</div>'+
-           '<div class="foot"><span class="time">'+T[si]+'</span>'+(r.ch?'<span class="tag">'+(r.t=="zam"&&!r.b?"Доп. пара":(TAG[r.t]||"Замена"))+'</span>':"")+'</div>'+
+           '<div class="foot"><span class="time">'+T[si]+'</span>'+(r.ch?'<span class="tag'+(r.t=="move"?" move":"")+'"'+(r.from?' title="Перенесено из '+esc(slotLabel(r.from))+'"':"")+'>'+(r.t=="zam"&&!r.b?"Доп. пара":(TAG[r.t]||"Замена"))+'</span>':"")+'</div>'+
            '<div class="bar" data-d="'+iso(dt)+'" data-s="'+si+'"><i></i></div>'+
          '</div>'+dots+
        '</div>';
@@ -600,7 +618,7 @@ function tab(x){
   $("etools").hidden=!x;
   $("hint").innerHTML=x
     ?'Нажмите на любую пару, чтобы изменить её. Стрелки ← → листают недели, <b>Ctrl+Z</b> отменяет последнее изменение. Изменения видны всем посетителям.'
-    :'<span class="lg y"></span>Замена · <span class="lg r"></span>Отмена пары · <span class="lg e"></span>Экстренная замена';
+    :'<span class="lg y"></span>Замена · <span class="lg r"></span>Отмена пары · <span class="lg e"></span>Экстренная замена · <span class="lg m"></span>Перенос';
   render();updateEditInfo();
 }
 $("t1").onclick=function(){tab(false)};
@@ -622,6 +640,7 @@ function openMenu(k,di){
   var h='<div class="dlg-head"><h4>'+D[di]+'</h4><div class="dlg-sub">'+T[si]+(CL?' · '+esc(CL.n):" · свободно")+'</div></div><div class="menu">';
   h+=btn("zam",CL?"Замена пары":"Добавить пару");
   if(CL)h+=btn("aud","Сменить аудиторию")+btn("prep","Сменить преподавателя");
+  if(CL&&!(st.ch[k]&&st.ch[k].cancel))h+=btn("move","Перенести пару");
   h+=btn("vpr","Отметить ВПР");
   if(CL)h+=btn("cancel","Отменить пару"," danger");
   if(st.ch[k])h+=btn("undo","Вернуть исходную пару"," ghost");
@@ -645,6 +664,32 @@ function form(a){
   show(h);
   if(!CL&&(a=="zam"||a=="vpr"))fillSubj();
 }
+function moveForm(){
+  CA="move";
+  var d=new Date(CK.split("|")[0]+"T00:00"),m=monday(d),di0=(d.getDay()+6)%7,si0=+CK.split("|")[1];
+  var def=si0<4?iso(d)+"|"+(si0+1):"";
+  var h='<div class="dlg-head"><h4>Перенос пары</h4><div class="dlg-sub">'+esc(CL.n)+' · '+D[di0]+', '+T[si0]+'</div></div>';
+  h+='<label>Новое время<select id="mto">';
+  for(var di=0;di<6;di++){
+    var dt=new Date(m);dt.setDate(dt.getDate()+di),oo="";
+    for(var si=0;si<5;si++){
+      var kk=iso(dt)+"|"+si;
+      if(kk===CK)continue;
+      var rr=lesson(dt,di,si),lab=(rr.cancel||!rr.l)?"":rr.l.n;
+      if(!def)def=kk;
+      oo+='<option value="'+kk+'" data-n="'+esc(lab)+'"'+(kk===def?" selected":"")+'>'+T[si]+(lab?" · "+esc(lab):(rr.cancel&&rr.to?" · перенесено":" · свободно"))+'</option>';
+    }
+    h+='<optgroup label="'+D[di]+', '+fmt(dt).slice(0,5)+'">'+oo+'</optgroup>';
+  }
+  h+='</select></label><p class="hint" id="mwarn"></p>';
+  h+='<div class="row"><button class="ok" data-a="move-save">Перенести</button><button data-a="x">Закрыть</button></div>';
+  show(h);moveHint();
+}
+function moveHint(){
+  var s=$("mto"),w=$("mwarn");if(!s||!w)return;
+  var o=s.options[s.selectedIndex],n=o?o.dataset.n:"";
+  w.innerHTML=n?('Пара <b>'+esc(n)+'</b> в этом слоте будет отменена.'):'В этом слоте свободно.';
+}
 function j(a,b,s){return[a,b].filter(Boolean).join(s)}
 function commit(k,val,msg){
   remember(k);
@@ -663,6 +708,15 @@ function saveF(){
   else{if(!gv("fs")){toast("Выберите предмет");return}
     o={t:"vpr",n:gv("fs"),r:gv("fr1"),p:"",u:false}}
   commit(CK,o,CA=="zam"&&!CL?"Пара добавлена":(MSG[CA]||"Изменение сохранено"));
+}
+function doMove(to){
+  if(!CL||!to||to===CK){toast("Выберите другое время");return}
+  var dst={t:"move",n:CL.n,r:CL.r,p:CL.p,u:!!CL.u,from:CK};
+  var src={cancel:true,t:"move",to:to,n:CL.n};
+  rememberKeys([CK,to]);
+  st.ch[CK]=src;st.ch[to]=dst;
+  push(CK,src);push(to,dst);save();close();render();updateEditInfo();
+  toast("Пара перенесена: "+slotLabel(to),"Отменить",undoLast);
 }
 function askReset(){
   var keys=weekKeys(),n=0;keys.forEach(function(k){if(st.ch[k])n++});
@@ -686,12 +740,15 @@ $("dl").onclick=function(ev){
   else if(a=="cancel")commit(CK,{cancel:true},"Пара отменена");
   else if(a=="undo")commit(CK,null,"Изменение удалено");
   else if(a=="reset-yes")doReset();
+  else if(a=="move")moveForm();
+  else if(a=="move-save")doMove($("mto").value);
   else form(a);
 };
 $("dl").onchange=function(ev){
   var s=ev.target,t=$(s.id+"_t");
   if(t)t.hidden=s.value!="__";
   if(s.id=="fs")fillSubj();
+  if(s.id=="mto")moveHint();
 };
 $("undoBtn").onclick=undoLast;
 $("resetBtn").onclick=askReset;
