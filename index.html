@@ -3,10 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#06070d">
+<meta name="theme-color" content="#2563eb">
 <meta name="description" content="Актуальное расписание занятий АУГСГиП: замены, отмены, переносы и изменения пар в реальном времени.">
 <title>Расписание · АУГСГиП</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236366f1'/%3E%3Cstop offset='1' stop-color='%2322d3ee'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='32' y='45' font-family='Arial' font-size='36' font-weight='700' fill='white' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script>
 try{
   var __t=localStorage.getItem("theme");
@@ -531,8 +533,6 @@ function setTheme(t){
   try{localStorage.setItem("theme",t)}catch(e){}
   var b=$("theme");
   if(b){b.innerHTML=t==="dark"?ICON_MOON:ICON_SUN;b.setAttribute("aria-label",t==="dark"?"Включить светлую тему":"Включить тёмную тему");b.title=b.getAttribute("aria-label")}
-  var m=document.querySelector('meta[name="theme-color"]');
-  if(m)m.setAttribute("content",t==="dark"?"#06070d":"#eef1f8");
 }
 function setTopbarH(){var tb=document.querySelector(".topbar");if(tb)document.documentElement.style.setProperty("--topbar-h",tb.offsetHeight+"px")}
 function toast(msg,label,action){
@@ -772,6 +772,9 @@ if(!navigator.onLine){syncEl.className="sync off";syncTxt.textContent="Офла�
 pull();setInterval(pull,15000);setInterval(bars,10000);
 setTimeout(setTopbarH,400);
 
+</script>
+<script>
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function(){}); }
 </script>
 </body>
 </html>
